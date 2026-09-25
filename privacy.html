@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Notice — SAMMI E-Library</title>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1a1a2e; --panel:#22223a; --border:#3a3a5a; --ink:#eee; --muted:#9a9aba;
+    --gold:#e8ac1f; --pink:#e2678f; --green:#3f8f5f; --brown:#7a5230;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--navy);color:var(--ink);font-family:'DM Sans',sans-serif;}
+  .wrap{max-width:760px;margin:0 auto;padding:32px 20px 80px;}
+  a.back{color:var(--muted);font-size:13px;text-decoration:none;}
+  a.back:hover{color:var(--gold);}
+  h1{font-family:'Crimson Pro',serif;color:#e8d5b7;font-size:32px;margin:18px 0 6px;}
+  .updated{color:var(--muted);font-size:12.5px;margin-bottom:28px;}
+  h2{font-family:'Crimson Pro',serif;color:var(--gold);font-size:18px;margin:30px 0 8px;}
+  p, li{color:#d3d3e0;font-size:14.5px;line-height:1.7;}
+  ul{padding-left:20px;}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px;}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);color:#d3d3e0;vertical-align:top;}
+  th{color:var(--gold);font-weight:600;}
+  .fill-me{color:var(--gold);font-style:italic;}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin:14px 0;}
+  .badge{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;margin-right:6px;}
+  footer{margin-top:48px;padding-top:20px;border-top:1px solid var(--border);color:var(--muted);font-size:12.5px;}
+  footer a{color:var(--muted);}
+</style>
+</head>
+<body>
+ <div class="wrap">
+  <a class="back" href="index.html">← Back to SAMMI E-Library</a>
+  <h1>Privacy Notice</h1>
+  <p class="updated">Last updated: <span class="fill-me">[add date when you publish this]</span></p>
+
+  <p>This notice explains, specifically and accurately, what SAMMI E-Library collects, why, where it's stored, and who is able to see it. It covers every account type: students signing in with an LRN, and librarian/staff accounts.</p>
+
+  <h2>What we collect, and who can see it</h2>
+  <table>
+    <tr><th>Data</th><th>When it's collected</th><th>Who can see it</th></tr>
+    <tr><td>Learning Reference Number (LRN)</td><td>Every time a student signs in</td><td>Not shown to other students. Only librarian accounts can view login records.</td></tr>
+    <tr><td>Login date &amp; time</td><td>Every sign-in</td><td>Librarian accounts only</td></tr>
+    <tr><td>Which resource links you open</td><td>Every time you click a resource card (curriculum links, Dewey directory, open-access books, etc.)</td><td>Librarian accounts only — used to see which resources are actually useful, never shown publicly or to other students</td></tr>
+    <tr><td>Borrower's LRN &amp; due date, for physical book checkouts</td><td>When a librarian checks out a physical book to you</td><td>Librarian accounts only</td></tr>
+    <tr><td>Librarian's email address &amp; password</td><td>When a librarian account is created by the site administrator</td><td>Password is never visible to anyone, including us — it is hashed and managed directly by our database provider's authentication system (see below)</td></tr>
+  </table>
+
+  <div class="card">
+    <span class="badge" style="background:var(--green);color:#fff;">Publicly visible</span>
+    <p style="margin:6px 0 0;">The book catalog itself — titles, authors, categories, availability ("3 of 5 available"), shelf location — is visible to anyone using the site, including without logging in. No personal data appears here.</p>
+  </div>
+  <div class="card">
+    <span class="badge" style="background:var(--pink);color:#fff;">Never publicly visible</span>
+    <p style="margin:6px 0 0;">Your LRN, login history, resource-click history, and borrowing records are never visible to other students and are not publicly accessible on the internet. Reading them requires a real, password-authenticated librarian account, and the database itself enforces this rule — it isn't just hidden by the page's design.</p>
+  </div>
+
+  <h2>What we do NOT collect</h2>
+  <ul>
+    <li>We do not ask students for a name, password, email, or any contact information — only an LRN.</li>
+    <li>We do not use advertising or third-party tracking cookies.</li>
+    <li>We do not sell or share any data with advertisers or unrelated third parties.</li>
+  </ul>
+
+  <h2>Where it's stored</h2>
+  <p>Data is stored in a managed database provided by Supabase, a third-party cloud database service, in the <span class="fill-me">[region — check Project Settings in your Supabase dashboard, e.g. Singapore]</span> region. Access to the underlying database is restricted by row-level security rules enforced on Supabase's servers, not only by this website's design.</p>
+
+  <h2>A note on student sign-in</h2>
+  <p>Signing in currently checks that an LRN is a valid 12-digit number — it does not yet verify the number against an official school enrollment list. This means the system trusts that students enter their own real LRN. If SAMMI later connects this to a verified student roster, this notice will be updated to reflect that.</p>
+
+  <h2>How long we keep it</h2>
+  <p>Login records, resource-click history, and borrowing records are kept indefinitely unless a librarian deletes them. There is currently no automatic deletion schedule. <span class="fill-me">[Update this if the school sets a retention policy, e.g. "records older than 2 school years are deleted."]</span></p>
+
+  <h2>Your rights</h2>
+  <p>Under the Philippines' Data Privacy Act of 2012 (RA 10173), you — or a parent/guardian on behalf of a minor — may ask to:</p>
+  <ul>
+    <li><strong>Be informed</strong> about what personal data is collected and why (this notice)</li>
+    <li><strong>Access</strong> the personal data held about you</li>
+    <li><strong>Request correction</strong> of inaccurate data</li>
+    <li><strong>Request deletion or blocking</strong> of your data, where applicable</li>
+    <li><strong>Object</strong> to certain processing of your data</li>
+  </ul>
+  <p>To make any of these requests, email <strong>sammi.library.hub@gmail.com</strong> or see the <a href="contact.html" style="color:var(--gold);">Contact page</a>.</p>
+
+  <h2>Changes to this notice</h2>
+  <p>If what this site collects or how it's used changes, this page will be updated and the "last updated" date above will change accordingly.</p>
+
+  <footer>
+    <p>SAMMI E-Library · <a href="index.html">Home</a> · <a href="about.html">About</a> · <a href="contact.html">Contact</a></p>
+  </footer>
+ </div>
+</body>
+</html>

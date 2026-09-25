@@ -68,7 +68,7 @@
       }
       if (!window.dataSdk || typeof window.dataSdk.init !== 'function') {
         const KEY = 'sammi-e-library-data-v1';
-        const TABLE = 'library_data';
+        const TABLE = 'books';
         const read = () => { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch(e) { return []; } };
         const write = data => localStorage.setItem(KEY, JSON.stringify(data));
         const makeId = () => (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now())+'-'+Math.random().toString(16).slice(2);
@@ -89,17 +89,24 @@
             const item = Object.assign({}, record, {__backendId: record.__backendId || makeId()});
             if (window.supabaseClient) {
               const { error } = await window.supabaseClient.from(TABLE).insert(item);
-              if (error) console.error('Supabase insert error:', error);
+              if (error) {
+                console.error('Supabase insert denied/failed:', error);
+                return {isOk:false, error};
+              }
+            } else {
+              write([...read(), item]);
             }
             this._data.push(item);
-            if (!window.supabaseClient) write(this._data);
             if (this._handler?.onDataChanged) this._handler.onDataChanged([...this._data]);
             return {isOk:true,item};
           },
           update: async function(record){
             if (window.supabaseClient) {
               const { error } = await window.supabaseClient.from(TABLE).update(record).eq('__backendId', record.__backendId);
-              if (error) { console.error('Supabase update error:', error); return {isOk:false}; }
+              if (error) {
+                console.error('Supabase update denied/failed:', error);
+                return {isOk:false, error};
+              }
             } else {
               this._data = read();
             }
@@ -113,7 +120,10 @@
           delete: async function(record){
             if (window.supabaseClient) {
               const { error } = await window.supabaseClient.from(TABLE).delete().eq('__backendId', record.__backendId);
-              if (error) { console.error('Supabase delete error:', error); return {isOk:false}; }
+              if (error) {
+                console.error('Supabase delete denied/failed:', error);
+                return {isOk:false, error};
+              }
             } else {
               this._data = read();
             }
@@ -161,6 +171,18 @@
       </div><button id="login-btn" type="submit" class="w-full py-3 rounded-lg font-medium transition text-white" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border: none; cursor: pointer;"> <span id="login-btn-text">Enter Library</span> </button>
      </form>
      <p id="login-error" class="hidden text-center text-xs mt-4 px-4 py-2 rounded-lg" style="background: #fee2e2; color: #dc2626;">Invalid LRN format. Please enter a valid number.</p>
+
+     <button id="show-librarian-login" onclick="toggleLibrarianLogin(true)" type="button" style="display:block;width:100%;text-align:center;background:none;border:none;color:#9a9aba;font-size:12px;margin-top:16px;cursor:pointer;text-decoration:underline;">Librarian login</button>
+
+     <form id="librarian-login-form" onsubmit="handleLibrarianLogin(event)" class="space-y-4 hidden" style="margin-top:14px;">
+      <div><label for="lib-email-input" class="text-xs font-medium" style="color:#9a9aba;display:block;margin-bottom:8px;">Librarian email</label>
+       <input id="lib-email-input" type="email" placeholder="librarian@sammi.edu.ph" required class="w-full px-4 py-3 rounded-lg text-sm transition" style="background:#2a2a4a;color:#eee;border:2px solid #3a3a5a;"></div>
+      <div><label for="lib-password-input" class="text-xs font-medium" style="color:#9a9aba;display:block;margin-bottom:8px;">Password</label>
+       <input id="lib-password-input" type="password" placeholder="••••••••" required class="w-full px-4 py-3 rounded-lg text-sm transition" style="background:#2a2a4a;color:#eee;border:2px solid #3a3a5a;"></div>
+      <button id="librarian-login-btn" type="submit" class="w-full py-3 rounded-lg font-medium transition" style="background:linear-gradient(135deg,#e8ac1f,#b9820f);color:#3a2600;border:none;cursor:pointer;"><span id="librarian-login-btn-text">Sign in as Librarian</span></button>
+      <button onclick="toggleLibrarianLogin(false)" type="button" style="display:block;width:100%;text-align:center;background:none;border:none;color:#9a9aba;font-size:12px;cursor:pointer;text-decoration:underline;">Back to student login</button>
+     </form>
+     <p id="librarian-login-error" class="hidden text-center text-xs mt-4 px-4 py-2 rounded-lg" style="background:#fee2e2;color:#dc2626;">Incorrect email or password.</p>
      <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid #3a3a5a;">
       <p style="color: #7a7a9a; text-align: center; font-size: 12px;">Demo: Enter any 12-digit number to access</p>
      </div>
@@ -175,6 +197,8 @@
        <h1 id="lib-title" style="font-family: 'Crimson Pro', serif; color: #e8d5b7; font-size: 28px; font-weight: 700;">SAMMI E-Library</h1>
        <p id="lib-subtitle" style="color: #7a7a9a; font-size: 14px; display:none;"></p>
       </div>
+      <span id="librarian-badge" style="display:none;background:#e8ac1f;color:#3a2600;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;letter-spacing:.03em;">📚 Librarian Mode</span>
+      <button id="librarian-logout-btn" onclick="librarianLogout()" class="hidden" style="background:none;border:1px solid #3a3a5a;color:#9a9aba;font-size:11px;padding:4px 10px;border-radius:999px;cursor:pointer;">Log out</button>
      </div><button id="add-btn" onclick="openModal()" class="hidden items-center gap-2 px-4 py-2 rounded-lg font-medium transition" style="background: #e8d5b7; color: #1a1a2e;"> <i data-lucide="plus" style="width:18px;height:18px;"></i> Add Book </button>
     </div>
    </header>
@@ -193,7 +217,7 @@
    <div class="max-w-6xl mx-auto px-6 py-4 flex flex-wrap items-center justify-between gap-3">
     <div class="flex gap-4 text-sm" style="color: #7a7a9a;"><span id="stat-total">0 books</span> <span id="stat-reading">0 reading</span> <span id="stat-completed">0 completed</span>
     </div>
-    <div class="flex gap-2"><select id="filter-cat" onchange="renderBooks()" class="px-3 py-1.5 rounded-lg text-sm" style="background: #2a2a4a; color: #ccc; border: 1px solid #3a3a5a;"> <option value="all">All Categories</option> <option value="Fiction">Fiction</option> <option value="Non-Fiction">Non-Fiction</option> <option value="Science">Science</option> <option value="History">History</option> <option value="Technology">Technology</option> <option value="Philosophy">Philosophy</option> <option value="Other">Other</option> </select> <select id="filter-status" onchange="renderBooks()" class="px-3 py-1.5 rounded-lg text-sm" style="background: #2a2a4a; color: #ccc; border: 1px solid #3a3a5a;"> <option value="all">All Status</option> <option value="Reading">Reading</option> <option value="Completed">Completed</option> <option value="Want to Read">Want to Read</option> </select> <button id="login-log-btn" onclick="openLoginLog()" class="hidden items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition" style="background: #2a2a4a; color: #9a9aba; border: 1px solid #3a3a5a;"> <i data-lucide="log-in" style="width:16px;height:16px;"></i> Login Log </button> <button id="download-btn" onclick="downloadCode()" class="hidden items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition" style="background: #2a2a4a; color: #9a9aba; border: 1px solid #3a3a5a;"> <i data-lucide="download" style="width:16px;height:16px;"></i> Download </button>
+    <div class="flex gap-2"><select id="filter-cat" onchange="renderBooks()" class="px-3 py-1.5 rounded-lg text-sm" style="background: #2a2a4a; color: #ccc; border: 1px solid #3a3a5a;"> <option value="all">All Categories</option> <option value="Fiction">Fiction</option> <option value="Non-Fiction">Non-Fiction</option> <option value="Science">Science</option> <option value="History">History</option> <option value="Technology">Technology</option> <option value="Philosophy">Philosophy</option> <option value="Other">Other</option> </select> <select id="filter-status" onchange="renderBooks()" class="px-3 py-1.5 rounded-lg text-sm" style="background: #2a2a4a; color: #ccc; border: 1px solid #3a3a5a;"> <option value="all">All Availability</option> <option value="available">Available Now</option> <option value="out">Fully Checked Out</option> </select> <button id="login-log-btn" onclick="openLoginLog()" class="hidden items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition" style="background: #2a2a4a; color: #9a9aba; border: 1px solid #3a3a5a;"> <i data-lucide="log-in" style="width:16px;height:16px;"></i> Login Log </button> <button id="reports-btn" onclick="openReports()" class="hidden items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition" style="background: #2a2a4a; color: #9a9aba; border: 1px solid #3a3a5a;"> <i data-lucide="bar-chart-2" style="width:16px;height:16px;"></i> Reports </button> <button id="download-btn" onclick="downloadCode()" class="hidden items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition" style="background: #2a2a4a; color: #9a9aba; border: 1px solid #3a3a5a;"> <i data-lucide="download" style="width:16px;height:16px;"></i> Download </button>
     </div>
    </div><!-- Open Access Shelf -->
    <section class="max-w-6xl mx-auto px-6 pb-6" id="nav-open-shelf" aria-labelledby="open-shelf-title">
@@ -376,13 +400,27 @@
     <div id="empty-state" class="hidden text-center py-16"><i data-lucide="book-open" style="width:48px;height:48px;color:#3a3a5a;margin:0 auto;"></i>
      <p style="color:#7a7a9a;margin-top:12px;">No books yet. Add your first book to get started!</p>
     </div>
-   </main><!-- Modal -->
-   <div id="modal" class="fixed inset-0 z-40 hidden items-center justify-center" style="background: rgba(0,0,0,0.7);">
+   </main>
+   <footer style="max-width:72rem;margin:0 auto;padding:24px 24px 40px;border-top:1px solid #2a2a4a;">
+    <p style="color:#6b7688;font-size:12px;text-align:center;">
+     SAMMI E-Library · <a href="about.html" style="color:#9a9aba;">About</a> · <a href="privacy.html" style="color:#9a9aba;">Privacy Notice</a> · <a href="contact.html" style="color:#9a9aba;">Contact</a>
+    </p>
+   </footer>
+   <!-- Modal -->
+   <div id="modal" class="fixed inset-0 z-40 hidden items-center justify-center" style="background: rgba(0,0,0,0.7);overflow-y:auto;padding:24px 0;">
     <div class="fade-in rounded-xl p-6 w-full max-w-md mx-4" style="background: #22223a; border: 1px solid #3a3a5a;">
      <div class="flex justify-between items-center mb-4">
-      <h2 id="modal-title" style="font-family:'Crimson Pro',serif;color:#e8d5b7;font-size:22px;font-weight:600;">Add New Book</h2><button onclick="closeModal()" style="color:#7a7a9a;"><i data-lucide="x" style="width:20px;height:20px;"></i></button>
+      <h2 id="modal-title" style="font-family:'Crimson Pro',serif;color:#e8d5b7;font-size:22px;font-weight:600;">Catalog New Book</h2><button onclick="closeModal()" style="color:#7a7a9a;"><i data-lucide="x" style="width:20px;height:20px;"></i></button>
      </div>
-     <form id="book-form" onsubmit="handleSubmit(event)" class="space-y-3"><input type="hidden" id="edit-id" value="">
+     <form id="book-form" onsubmit="handleSubmit(event)" class="space-y-3"><input type="hidden" id="edit-id" value=""><input type="hidden" id="f-cover-url" value="">
+      <div><label for="f-isbn" class="text-xs font-medium" style="color:#9a9aba;">ISBN</label>
+       <div style="display:flex;gap:6px;margin-top:4px;">
+        <input id="f-isbn" placeholder="e.g. 9780141439518" class="px-3 py-2 rounded-lg text-sm" style="flex:1;background:#2a2a4a;color:#eee;border:1px solid #3a3a5a;">
+        <button type="button" id="isbn-lookup-btn" onclick="lookupIsbn()" class="px-3 py-2 rounded-lg text-sm font-medium" style="background:#3a3a5a;color:#e8d5b7;white-space:nowrap;">Look up</button>
+       </div>
+       <p style="color:#6b7688;font-size:10.5px;margin-top:4px;">Scan with a USB/Bluetooth barcode scanner (it types like a keyboard) or type the ISBN, then click Look up to auto-fill details.</p>
+       <p id="isbn-lookup-status" class="hidden" style="font-size:11px;margin-top:4px;"></p>
+      </div>
       <div><label for="f-title" class="text-xs font-medium" style="color:#9a9aba;">Title *</label> <input id="f-title" required class="w-full mt-1 px-3 py-2 rounded-lg text-sm" style="background:#2a2a4a;color:#eee;border:1px solid #3a3a5a;">
       </div>
       <div><label for="f-author" class="text-xs font-medium" style="color:#9a9aba;">Author *</label> <input id="f-author" required class="w-full mt-1 px-3 py-2 rounded-lg text-sm" style="background:#2a2a4a;color:#eee;border:1px solid #3a3a5a;">
@@ -390,13 +428,17 @@
       <div class="grid grid-cols-2 gap-3">
        <div><label for="f-category" class="text-xs font-medium" style="color:#9a9aba;">Category</label> <select id="f-category" class="w-full mt-1 px-3 py-2 rounded-lg text-sm" style="background:#2a2a4a;color:#eee;border:1px solid #3a3a5a;"> <option>Fiction</option><option>Non-Fiction</option><option>Science</option><option>History</option><option>Technology</option><option>Philosophy</option><option>Other</option> </select>
        </div>
-       <div><label for="f-status" class="text-xs font-medium" style="color:#9a9aba;">Status</label> <select id="f-status" class="w-full mt-1 px-3 py-2 rounded-lg text-sm" style="background:#2a2a4a;color:#eee;border:1px solid #3a3a5a;"> <option>Want to Read</option><option>Reading</option><option>Completed</option> </select>
+       <div><label for="f-shelf" class="text-xs font-medium" style="color:#9a9aba;">Shelf / Call No.</label> <input id="f-shelf" placeholder="e.g. FIC-AUS" class="w-full mt-1 px-3 py-2 rounded-lg text-sm" style="background:#2a2a4a;color:#eee;border:1px solid #3a3a5a;">
        </div>
       </div>
-      <div><label for="f-rating" class="text-xs font-medium" style="color:#9a9aba;">Rating (1-5)</label> <input id="f-rating" type="number" min="1" max="5" class="w-full mt-1 px-3 py-2 rounded-lg text-sm" style="background:#2a2a4a;color:#eee;border:1px solid #3a3a5a;">
+      <div class="grid grid-cols-2 gap-3">
+       <div><label for="f-copies" class="text-xs font-medium" style="color:#9a9aba;">Total Copies</label> <input id="f-copies" type="number" min="1" value="1" required class="w-full mt-1 px-3 py-2 rounded-lg text-sm" style="background:#2a2a4a;color:#eee;border:1px solid #3a3a5a;">
+       </div>
+       <div><label for="f-rating" class="text-xs font-medium" style="color:#9a9aba;">Rating (1-5)</label> <input id="f-rating" type="number" min="1" max="5" class="w-full mt-1 px-3 py-2 rounded-lg text-sm" style="background:#2a2a4a;color:#eee;border:1px solid #3a3a5a;">
+       </div>
       </div>
-      <div><label for="f-notes" class="text-xs font-medium" style="color:#9a9aba;">Notes</label> <textarea id="f-notes" rows="2" class="w-full mt-1 px-3 py-2 rounded-lg text-sm" style="background:#2a2a4a;color:#eee;border:1px solid #3a3a5a;"></textarea>
-      </div><button id="submit-btn" type="submit" class="w-full py-2.5 rounded-lg font-medium transition" style="background:#e8d5b7;color:#1a1a2e;">Add Book</button>
+      <div><label for="f-notes" class="text-xs font-medium" style="color:#9a9aba;">Notes / Description</label> <textarea id="f-notes" rows="2" class="w-full mt-1 px-3 py-2 rounded-lg text-sm" style="background:#2a2a4a;color:#eee;border:1px solid #3a3a5a;"></textarea>
+      </div><button id="submit-btn" type="submit" class="w-full py-2.5 rounded-lg font-medium transition" style="background:#e8d5b7;color:#1a1a2e;">Add to Catalog</button>
      </form>
     </div>
    </div><!-- Delete Confirm -->
@@ -406,6 +448,26 @@
      <div class="flex gap-3 justify-center"><button onclick="cancelDelete()" class="px-4 py-2 rounded-lg text-sm" style="background:#2a2a4a;color:#ccc;">Cancel</button> <button onclick="confirmDelete()" class="px-4 py-2 rounded-lg text-sm font-medium" style="background:#ef4444;color:#fff;">Delete</button>
      </div>
     </div>
+   </div>
+  </div><!-- Check Out Modal -->
+  <div id="checkout-modal" class="fixed inset-0 z-40 hidden items-center justify-center" style="background: rgba(0,0,0,0.7);">
+   <div class="fade-in rounded-xl p-6 w-full max-w-sm mx-4" style="background: #22223a; border: 1px solid #3a3a5a;">
+    <div class="flex justify-between items-center mb-4">
+     <h2 style="font-family:'Crimson Pro',serif;color:#e8d5b7;font-size:20px;font-weight:600;">Check Out Book</h2><button onclick="closeCheckoutModal()" style="color:#7a7a9a;"><i data-lucide="x" style="width:18px;height:18px;"></i></button>
+    </div>
+    <form id="checkout-form" onsubmit="handleCheckoutSubmit(event)" class="space-y-3"><input type="hidden" id="checkout-book-id" value="">
+     <div><label for="checkout-lrn" class="text-xs font-medium" style="color:#9a9aba;">Borrower's LRN</label> <input id="checkout-lrn" required pattern="\d{12}" title="12-digit LRN" class="w-full mt-1 px-3 py-2 rounded-lg text-sm" style="background:#2a2a4a;color:#eee;border:1px solid #3a3a5a;"></div>
+     <div><label for="checkout-due" class="text-xs font-medium" style="color:#9a9aba;">Due Date</label> <input id="checkout-due" type="date" required class="w-full mt-1 px-3 py-2 rounded-lg text-sm" style="background:#2a2a4a;color:#eee;border:1px solid #3a3a5a;"></div>
+     <button id="checkout-submit-btn" type="submit" class="w-full py-2.5 rounded-lg font-medium transition" style="background:#397d6e;color:#fff;">Confirm Check Out</button>
+    </form>
+   </div>
+  </div><!-- Reports Modal -->
+  <div id="reports-modal" class="fixed inset-0 z-40 hidden items-center justify-center" style="background: rgba(0,0,0,0.7);">
+   <div class="fade-in rounded-xl p-6 w-full max-w-2xl mx-4" style="background: #22223a; border: 1px solid #3a3a5a; max-height: 80vh; overflow-y: auto;">
+    <div class="flex justify-between items-center mb-4">
+     <h2 style="font-family:'Crimson Pro',serif;color:#e8d5b7;font-size:22px;font-weight:600;">Library Reports</h2><button onclick="closeReports()" style="color:#7a7a9a;"><i data-lucide="x" style="width:20px;height:20px;"></i></button>
+    </div>
+    <div id="reports-content" class="space-y-4"></div>
    </div>
   </div><!-- Login Log Modal -->
   <div id="login-log-modal" class="fixed inset-0 z-40 hidden items-center justify-center" style="background: rgba(0,0,0,0.7);">
@@ -430,19 +492,25 @@
     }
   }
 
-  // The author/owner's LRN. Only this LRN gets access to the Login Log,
-  // Download, and Add Book controls. Replace with the real author LRN.
-  const OWNER_LRN = '010512192126';
-  let isOwner = false;
+  // Librarian access: REAL server-authenticated access via Supabase Auth.
+  // A user only gets librarian powers if (a) they sign in with a real email/password
+  // account you created for them in Supabase, AND (b) their account is listed in the
+  // "librarians" table in your database. The database itself enforces this — even
+  // someone editing this page's JavaScript in their browser console cannot add,
+  // edit, or delete books without passing both checks on the server.
+  let isLibrarian = false;
+  let librarianSession = null;
 
   function applyRolePermissions() {
-    isOwner = currentUser === OWNER_LRN;
+    isLibrarian = !!librarianSession;
     const addBtn = document.getElementById('add-btn');
     const loginLogBtn = document.getElementById('login-log-btn');
     const downloadBtn = document.getElementById('download-btn');
-    [addBtn, loginLogBtn, downloadBtn].forEach(btn => {
+    const reportsBtn = document.getElementById('reports-btn');
+    const librarianBadge = document.getElementById('librarian-badge');
+    [addBtn, loginLogBtn, downloadBtn, reportsBtn].forEach(btn => {
       if (!btn) return;
-      if (isOwner) {
+      if (isLibrarian) {
         btn.classList.remove('hidden');
         btn.classList.add('flex');
       } else {
@@ -450,9 +518,63 @@
         btn.classList.remove('flex');
       }
     });
+    if (librarianBadge) librarianBadge.style.display = isLibrarian ? 'inline-block' : 'none';
+    const librarianLogoutBtn = document.getElementById('librarian-logout-btn');
+    if (librarianLogoutBtn) librarianLogoutBtn.classList.toggle('hidden', !isLibrarian);
+    renderBooks();
   }
 
-  // LRN Login Handler
+  function toggleLibrarianLogin(show) {
+    document.getElementById('login-form').classList.toggle('hidden', show);
+    document.getElementById('show-librarian-login').classList.toggle('hidden', show);
+    document.getElementById('librarian-login-form').classList.toggle('hidden', !show);
+    document.getElementById('librarian-login-error').classList.add('hidden');
+  }
+
+  async function handleLibrarianLogin(e) {
+    e.preventDefault();
+    const errorEl = document.getElementById('librarian-login-error');
+    const btn = document.getElementById('librarian-login-btn');
+    const btnText = document.getElementById('librarian-login-btn-text');
+    errorEl.classList.add('hidden');
+
+    if (!window.supabaseClient) {
+      errorEl.textContent = 'Server not configured yet — add your Supabase URL and key in this file first.';
+      errorEl.classList.remove('hidden');
+      return;
+    }
+
+    const email = document.getElementById('lib-email-input').value.trim();
+    const password = document.getElementById('lib-password-input').value;
+    btn.disabled = true;
+    btnText.textContent = 'Signing in...';
+
+    const { data, error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
+
+    btn.disabled = false;
+    btnText.textContent = 'Sign in as Librarian';
+
+    if (error || !data.session) {
+      errorEl.textContent = 'Incorrect email or password.';
+      errorEl.classList.remove('hidden');
+      return;
+    }
+
+    librarianSession = data.session;
+    applyRolePermissions();
+    document.getElementById('login-screen').style.display = 'none';
+  }
+
+  async function librarianLogout() {
+    if (window.supabaseClient) await window.supabaseClient.auth.signOut();
+    librarianSession = null;
+    currentUser = null;
+    sessionStorage.removeItem('sammilrn');
+    applyRolePermissions();
+    location.reload();
+  }
+
+  // LRN Login Handler (students — unchanged, format-check only)
   function handleLogin(e) {
     e.preventDefault();
     const lrnInput = document.getElementById('lrn-input').value.trim();
@@ -482,9 +604,20 @@
     }, 600);
   }
 
-  // Check if already logged in
-  window.addEventListener('load', () => {
+  // Check if already logged in (student LRN session, or a real librarian session)
+  window.addEventListener('load', async () => {
     safeCreateIcons();
+
+    if (window.supabaseClient) {
+      const { data } = await window.supabaseClient.auth.getSession();
+      if (data.session) {
+        librarianSession = data.session;
+        applyRolePermissions();
+        document.getElementById('login-screen').style.display = 'none';
+        return;
+      }
+    }
+
     const storedLRN = sessionStorage.getItem('sammilrn');
     if (storedLRN && /^\d{12}$/.test(storedLRN)) {
       currentUser = storedLRN;
@@ -496,25 +629,32 @@
   async function recordLogin(lrn) {
     const now = new Date();
     const logEntry = {
-      title: '', author: '', category: '', status: '', rating: 0, notes: '', added_at: '',
       lrn: lrn,
       login_timestamp: now.toISOString(),
       login_date: now.toLocaleDateString(),
       login_time: now.toLocaleTimeString()
     };
-    const result = await window.dataSdk.create(logEntry);
-    if (result.isOk) {
-      loginLogs.push(logEntry);
+    if (window.supabaseClient) {
+      const { error } = await window.supabaseClient.from('login_logs').insert(logEntry);
+      if (error) console.error('Login log insert error:', error);
     }
+    loginLogs.push(logEntry);
   }
 
   async function loadLoginLogs() {
-    // Logs will be loaded via onDataChanged
+    if (!window.supabaseClient) return;
+    // Only succeeds for an authenticated librarian — the database enforces this,
+    // so a student session simply gets an empty/denied result here.
+    const { data, error } = await window.supabaseClient.from('login_logs').select('*').order('login_timestamp', { ascending: false });
+    if (error) { console.error('Login log fetch denied/failed:', error); loginLogs = []; return; }
+    loginLogs = data || [];
   }
 
-  function openLoginLog() {
+  async function openLoginLog() {
     document.getElementById('login-log-modal').classList.remove('hidden');
     document.getElementById('login-log-modal').classList.add('flex');
+    document.getElementById('login-log-content').innerHTML = '<p style="color:#7a7a9a;text-align:center;padding:20px;">Loading…</p>';
+    await loadLoginLogs();
     renderLoginLog();
   }
 
@@ -524,15 +664,15 @@
   }
 
   function renderLoginLog() {
-    const logs = books.filter(b => b.lrn && b.login_timestamp);
+    const logs = loginLogs;
     const content = document.getElementById('login-log-content');
-    
+
     if (logs.length === 0) {
       content.innerHTML = '<p style="color:#7a7a9a;text-align:center;padding:20px;">No login records yet</p>';
       return;
     }
 
-    content.innerHTML = logs.sort((a, b) => new Date(b.login_timestamp) - new Date(a.login_timestamp)).map(log => `
+    content.innerHTML = logs.slice().sort((a, b) => new Date(b.login_timestamp) - new Date(a.login_timestamp)).map(log => `
       <div class="p-3 rounded-lg" style="background:#2a2a4a;border-left:3px solid #e8d5b7;">
         <div class="flex justify-between items-start">
           <div>
@@ -640,10 +780,12 @@
     const catFilter = document.getElementById('filter-cat').value;
     const statusFilter = document.getElementById('filter-status').value;
 
-    let filtered = books.filter(b => !b.lrn && b.title && b.author).filter(b => {
-      if (search && !b.title.toLowerCase().includes(search) && !b.author.toLowerCase().includes(search)) return false;
+    let filtered = books.filter(b => b.title && b.author).filter(b => {
+      if (search && !b.title.toLowerCase().includes(search) && !b.author.toLowerCase().includes(search) && !(b.isbn || '').includes(search)) return false;
       if (catFilter !== 'all' && b.category !== catFilter) return false;
-      if (statusFilter !== 'all' && b.status !== statusFilter) return false;
+      const avail = b.available_copies != null ? b.available_copies : (b.total_copies || 1);
+      if (statusFilter === 'available' && avail <= 0) return false;
+      if (statusFilter === 'out' && avail > 0) return false;
       return true;
     });
 
@@ -691,23 +833,36 @@
   }
 
   function updateCard(div, book) {
-    const statusClass = book.status === 'Reading' ? 'status-reading' : book.status === 'Completed' ? 'status-completed' : 'status-want-to-read';
+    const total = book.total_copies || 1;
+    const avail = book.available_copies != null ? book.available_copies : total;
+    const availClass = avail <= 0 ? 'status-want-to-read' : 'status-completed';
+    const availLabel = avail <= 0 ? 'All copies checked out' : `${avail} of ${total} available`;
     const stars = book.rating ? '★'.repeat(book.rating) + '☆'.repeat(5 - book.rating) : '';
     div.innerHTML = `
       <div class="flex justify-between items-start mb-2">
-        <span class="text-xs px-2 py-0.5 rounded-full font-medium ${statusClass}">${book.status}</span>
-        <div class="flex gap-1">
+        <span class="text-xs px-2 py-0.5 rounded-full font-medium ${availClass}">${availLabel}</span>
+        ${isLibrarian ? `<div class="flex gap-1">
           <button onclick="editBook('${book.__backendId}')" class="p-1 rounded" style="color:#7a7a9a;"><i data-lucide="edit" style="width:14px;height:14px;"></i></button>
           <button onclick="requestDelete('${book.__backendId}')" class="p-1 rounded" style="color:#7a7a9a;"><i data-lucide="trash-2" style="width:14px;height:14px;"></i></button>
+        </div>` : ''}
+      </div>
+      <div style="display:flex;gap:10px;">
+        ${book.cover_url ? `<img src="${escHtml(book.cover_url)}" alt="" style="width:44px;height:64px;object-fit:cover;border-radius:4px;flex-shrink:0;background:#2a2a4a;">` : ''}
+        <div style="min-width:0;">
+          <h3 style="font-family:'Crimson Pro',serif;color:#e8d5b7;font-size:18px;font-weight:600;margin-bottom:2px;line-height:1.2;">${escHtml(book.title)}</h3>
+          <p style="color:#9a9aba;font-size:13px;">by ${escHtml(book.author)}</p>
         </div>
       </div>
-      <h3 style="font-family:'Crimson Pro',serif;color:#e8d5b7;font-size:18px;font-weight:600;margin-bottom:2px;">${escHtml(book.title)}</h3>
-      <p style="color:#9a9aba;font-size:13px;">by ${escHtml(book.author)}</p>
       <div class="flex items-center justify-between mt-3">
         <span class="text-xs px-2 py-0.5 rounded" style="background:#2a2a4a;color:#9a9aba;">${book.category}</span>
         ${stars ? `<span style="color:#f59e0b;font-size:12px;">${stars}</span>` : ''}
       </div>
+      ${(book.isbn || book.shelf_location) ? `<p style="color:#6b7688;font-size:10.5px;margin-top:6px;">${book.isbn ? `ISBN ${escHtml(book.isbn)}` : ''}${book.isbn && book.shelf_location ? ' · ' : ''}${book.shelf_location ? `Shelf ${escHtml(book.shelf_location)}` : ''}</p>` : ''}
       ${book.notes ? `<p class="mt-2 text-xs" style="color:#7a7a9a;line-height:1.4;">${escHtml(book.notes)}</p>` : ''}
+      ${isLibrarian ? `<div class="flex gap-2 mt-3">
+        <button onclick="checkOutBook('${book.__backendId}')" ${avail <= 0 ? 'disabled' : ''} class="flex-1 py-1.5 rounded-lg text-xs font-medium" style="background:${avail <= 0 ? '#2a2a4a' : '#397d6e'};color:${avail <= 0 ? '#6b7688' : '#fff'};border:none;cursor:${avail <= 0 ? 'not-allowed' : 'pointer'};">Check Out</button>
+        <button onclick="returnBook('${book.__backendId}')" ${avail >= total ? 'disabled' : ''} class="flex-1 py-1.5 rounded-lg text-xs font-medium" style="background:${avail >= total ? '#2a2a4a' : '#5275a8'};color:${avail >= total ? '#6b7688' : '#fff'};border:none;cursor:${avail >= total ? 'not-allowed' : 'pointer'};">Return</button>
+      </div>` : ''}
     `;
   }
 
@@ -716,21 +871,26 @@
   function openModal(book) {
     document.getElementById('modal').classList.remove('hidden');
     document.getElementById('modal').classList.add('flex');
+    document.getElementById('isbn-lookup-status').classList.add('hidden');
     if (book) {
-      document.getElementById('modal-title').textContent = 'Edit Book';
+      document.getElementById('modal-title').textContent = 'Edit Catalog Entry';
       document.getElementById('submit-btn').textContent = 'Save Changes';
       document.getElementById('edit-id').value = book.__backendId;
+      document.getElementById('f-isbn').value = book.isbn || '';
       document.getElementById('f-title').value = book.title;
       document.getElementById('f-author').value = book.author;
       document.getElementById('f-category').value = book.category;
-      document.getElementById('f-status').value = book.status;
+      document.getElementById('f-shelf').value = book.shelf_location || '';
+      document.getElementById('f-copies').value = book.total_copies || 1;
       document.getElementById('f-rating').value = book.rating || '';
       document.getElementById('f-notes').value = book.notes || '';
+      document.getElementById('f-cover-url').value = book.cover_url || '';
     } else {
-      document.getElementById('modal-title').textContent = 'Add New Book';
-      document.getElementById('submit-btn').textContent = 'Add Book';
+      document.getElementById('modal-title').textContent = 'Catalog New Book';
+      document.getElementById('submit-btn').textContent = 'Add to Catalog';
       document.getElementById('book-form').reset();
       document.getElementById('edit-id').value = '';
+      document.getElementById('f-copies').value = 1;
     }
   }
 
@@ -739,39 +899,227 @@
     document.getElementById('modal').classList.remove('flex');
   }
 
+  // ISBN lookup via Open Library's free public API (no key required).
+  // Auto-fills title, author, and cover image so a librarian doesn't have
+  // to type everything by hand. Works with typed ISBNs or ones "typed" in
+  // by a USB/Bluetooth barcode scanner, since those act like a keyboard.
+  async function lookupIsbn() {
+    const isbn = document.getElementById('f-isbn').value.trim().replace(/[^0-9Xx]/g, '');
+    const statusEl = document.getElementById('isbn-lookup-status');
+    const btn = document.getElementById('isbn-lookup-btn');
+    if (!isbn) {
+      statusEl.textContent = 'Enter an ISBN first.';
+      statusEl.style.color = '#dc2626';
+      statusEl.classList.remove('hidden');
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Looking up...';
+    statusEl.classList.add('hidden');
+    try {
+      const res = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`);
+      const data = await res.json();
+      const info = data[`ISBN:${isbn}`];
+      if (!info) {
+        statusEl.textContent = 'No match found for that ISBN. You can still fill in the details manually.';
+        statusEl.style.color = '#e8ac1f';
+        statusEl.classList.remove('hidden');
+      } else {
+        if (info.title) document.getElementById('f-title').value = info.title;
+        if (info.authors && info.authors.length) document.getElementById('f-author').value = info.authors.map(a => a.name).join(', ');
+        if (info.cover && info.cover.medium) document.getElementById('f-cover-url').value = info.cover.medium;
+        statusEl.textContent = 'Found it! Title and author filled in — double check before saving.';
+        statusEl.style.color = '#3f8f5f';
+        statusEl.classList.remove('hidden');
+      }
+    } catch (err) {
+      console.error('ISBN lookup failed:', err);
+      statusEl.textContent = 'Lookup failed (offline or blocked). You can still fill in the details manually.';
+      statusEl.style.color = '#dc2626';
+      statusEl.classList.remove('hidden');
+    }
+    btn.disabled = false;
+    btn.textContent = 'Look up';
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
+    if (!isLibrarian) { showToast('Only librarian accounts can add or edit catalog entries', true); return; }
     const btn = document.getElementById('submit-btn');
     btn.disabled = true; btn.textContent = 'Saving...';
 
+    const editId = document.getElementById('edit-id').value;
+    const newTotalCopies = parseInt(document.getElementById('f-copies').value) || 1;
+
     const data = {
+      isbn: document.getElementById('f-isbn').value.trim(),
       title: document.getElementById('f-title').value.trim(),
       author: document.getElementById('f-author').value.trim(),
       category: document.getElementById('f-category').value,
-      status: document.getElementById('f-status').value,
+      shelf_location: document.getElementById('f-shelf').value.trim(),
+      total_copies: newTotalCopies,
       rating: parseInt(document.getElementById('f-rating').value) || 0,
       notes: document.getElementById('f-notes').value.trim(),
+      cover_url: document.getElementById('f-cover-url').value.trim(),
       added_at: new Date().toISOString()
     };
 
-    const editId = document.getElementById('edit-id').value;
     let result;
     if (editId) {
       const existing = books.find(b => b.__backendId === editId);
-      if (existing) result = await window.dataSdk.update({ ...existing, ...data });
+      if (existing) {
+        // Keep available_copies consistent if the librarian changes the total
+        const oldTotal = existing.total_copies || 1;
+        const oldAvailable = existing.available_copies != null ? existing.available_copies : oldTotal;
+        const delta = newTotalCopies - oldTotal;
+        data.available_copies = Math.max(0, Math.min(newTotalCopies, oldAvailable + delta));
+        result = await window.dataSdk.update({ ...existing, ...data });
+      }
     } else {
-      if (books.length >= 999) { showToast('Limit reached (999 books max)', true); btn.disabled = false; btn.textContent = 'Add Book'; return; }
+      if (books.length >= 999) { showToast('Limit reached (999 titles max)', true); btn.disabled = false; btn.textContent = 'Add to Catalog'; return; }
+      data.available_copies = newTotalCopies; // brand-new title: all copies start on the shelf
       result = await window.dataSdk.create(data);
     }
 
     if (result && result.isOk) {
-      showToast(editId ? 'Book updated!' : 'Book added!');
+      showToast(editId ? 'Catalog entry updated!' : 'Book added to catalog!');
       closeModal();
+    } else if (result && result.error && /policy|permission|denied/i.test(result.error.message || '')) {
+      showToast('Access denied by the server — your librarian session may have expired', true);
     } else {
       showToast('Something went wrong', true);
     }
     btn.disabled = false;
-    btn.textContent = editId ? 'Save Changes' : 'Add Book';
+    btn.textContent = editId ? 'Save Changes' : 'Add to Catalog';
+  }
+
+  // ====== CIRCULATION (Check Out / Return) ======
+  function checkOutBook(bookId) {
+    if (!isLibrarian) return;
+    document.getElementById('checkout-book-id').value = bookId;
+    document.getElementById('checkout-lrn').value = '';
+    const due = new Date(); due.setDate(due.getDate() + 7);
+    document.getElementById('checkout-due').value = due.toISOString().slice(0, 10);
+    document.getElementById('checkout-modal').classList.remove('hidden');
+    document.getElementById('checkout-modal').classList.add('flex');
+  }
+
+  function closeCheckoutModal() {
+    document.getElementById('checkout-modal').classList.add('hidden');
+    document.getElementById('checkout-modal').classList.remove('flex');
+  }
+
+  async function handleCheckoutSubmit(e) {
+    e.preventDefault();
+    if (!isLibrarian || !window.supabaseClient) { showToast('Only librarian accounts can check out books', true); return; }
+    const bookId = document.getElementById('checkout-book-id').value;
+    const lrn = document.getElementById('checkout-lrn').value.trim();
+    const dueDate = document.getElementById('checkout-due').value;
+    const book = books.find(b => b.__backendId === bookId);
+    if (!book) return;
+    const btn = document.getElementById('checkout-submit-btn');
+    btn.disabled = true; btn.textContent = 'Saving...';
+
+    const { error: circError } = await window.supabaseClient.from('circulation').insert({
+      book_id: bookId, lrn: lrn, due_date: dueDate
+    });
+    if (circError) {
+      console.error('Checkout insert failed:', circError);
+      showToast('Check-out failed — server denied the request', true);
+      btn.disabled = false; btn.textContent = 'Confirm Check Out';
+      return;
+    }
+
+    const newAvailable = Math.max(0, (book.available_copies != null ? book.available_copies : book.total_copies || 1) - 1);
+    const result = await window.dataSdk.update({ ...book, available_copies: newAvailable });
+    if (result.isOk) {
+      showToast(`Checked out to LRN ${lrn}`);
+      closeCheckoutModal();
+    } else {
+      showToast('Copy count update failed — check the circulation table manually', true);
+    }
+    btn.disabled = false; btn.textContent = 'Confirm Check Out';
+  }
+
+  async function returnBook(bookId) {
+    if (!isLibrarian || !window.supabaseClient) { showToast('Only librarian accounts can return books', true); return; }
+    const book = books.find(b => b.__backendId === bookId);
+    if (!book) return;
+
+    const { data: openLoans, error: findError } = await window.supabaseClient
+      .from('circulation').select('*').eq('book_id', bookId).is('returned_at', null)
+      .order('checked_out_at', { ascending: true }).limit(1);
+    if (findError || !openLoans || openLoans.length === 0) {
+      showToast('No active checkout found for this title', true);
+      return;
+    }
+
+    const { error: updateError } = await window.supabaseClient
+      .from('circulation').update({ returned_at: new Date().toISOString() }).eq('id', openLoans[0].id);
+    if (updateError) {
+      showToast('Return failed — server denied the request', true);
+      return;
+    }
+
+    const total = book.total_copies || 1;
+    const newAvailable = Math.min(total, (book.available_copies != null ? book.available_copies : total) + 1);
+    const result = await window.dataSdk.update({ ...book, available_copies: newAvailable });
+    if (result.isOk) {
+      showToast(`Returned — was checked out to LRN ${openLoans[0].lrn}`);
+    } else {
+      showToast('Copy count update failed — check the circulation table manually', true);
+    }
+  }
+
+  // ====== REPORTS ======
+  async function openReports() {
+    if (!isLibrarian || !window.supabaseClient) return;
+    document.getElementById('reports-modal').classList.remove('hidden');
+    document.getElementById('reports-modal').classList.add('flex');
+    const content = document.getElementById('reports-content');
+    content.innerHTML = '<p style="color:#7a7a9a;text-align:center;padding:20px;">Loading…</p>';
+
+    const { data: circ, error } = await window.supabaseClient.from('circulation').select('*');
+    if (error) {
+      content.innerHTML = '<p style="color:#dc2626;text-align:center;padding:20px;">Could not load reports (access denied or offline).</p>';
+      return;
+    }
+
+    const bookById = Object.fromEntries(books.map(b => [b.__backendId, b]));
+    const counts = {};
+    (circ || []).forEach(row => { counts[row.book_id] = (counts[row.book_id] || 0) + 1; });
+    const mostBorrowed = Object.entries(counts)
+      .map(([id, count]) => ({ book: bookById[id], count }))
+      .filter(x => x.book)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    const today = new Date().toISOString().slice(0, 10);
+    const active = (circ || []).filter(row => !row.returned_at);
+    const overdue = active.filter(row => row.due_date && row.due_date < today);
+
+    content.innerHTML = `
+      <div>
+        <h3 style="color:#e8d5b7;font-size:14px;font-weight:600;margin-bottom:8px;">📈 Most Borrowed</h3>
+        ${mostBorrowed.length === 0 ? '<p style="color:#7a7a9a;font-size:13px;">No checkouts recorded yet.</p>' :
+          mostBorrowed.map(x => `<div class="flex justify-between" style="padding:6px 0;border-bottom:1px solid #2a2a4a;"><span style="color:#eee;font-size:13px;">${escHtml(x.book.title)}</span><span style="color:#9a9aba;font-size:12px;">${x.count} checkout${x.count === 1 ? '' : 's'}</span></div>`).join('')}
+      </div>
+      <div>
+        <h3 style="color:#e8d5b7;font-size:14px;font-weight:600;margin:16px 0 8px;">📕 Currently Borrowed (${active.length})</h3>
+        ${active.length === 0 ? '<p style="color:#7a7a9a;font-size:13px;">Nothing currently checked out.</p>' :
+          active.map(row => {
+            const b = bookById[row.book_id];
+            const isOverdue = row.due_date && row.due_date < today;
+            return `<div class="flex justify-between" style="padding:6px 0;border-bottom:1px solid #2a2a4a;"><span style="color:#eee;font-size:13px;">${b ? escHtml(b.title) : 'Unknown title'} — LRN ${escHtml(row.lrn)}</span><span style="font-size:12px;color:${isOverdue ? '#ef4444' : '#9a9aba'};">${isOverdue ? 'Overdue since ' : 'Due '}${row.due_date || '—'}</span></div>`;
+          }).join('')}
+      </div>
+      ${overdue.length > 0 ? `<p style="color:#ef4444;font-size:12px;margin-top:12px;">⚠️ ${overdue.length} book${overdue.length === 1 ? ' is' : 's are'} overdue.</p>` : ''}
+    `;
+  }
+
+  function closeReports() {
+    document.getElementById('reports-modal').classList.add('hidden');
+    document.getElementById('reports-modal').classList.remove('flex');
   }
 
   function editBook(id) {
@@ -780,6 +1128,7 @@
   }
 
   function requestDelete(id) {
+    if (!isLibrarian) { showToast('Only librarian accounts can delete books', true); return; }
     deleteTarget = id;
     document.getElementById('delete-confirm').classList.remove('hidden');
     document.getElementById('delete-confirm').classList.add('flex');
