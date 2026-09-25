@@ -16,6 +16,8 @@
     .nav-pill:hover{opacity:.85;}
     #site-nav::-webkit-scrollbar{height:4px;}
     #site-nav::-webkit-scrollbar-thumb{background:#3a3a5a;border-radius:2px;}
+    .login-tab{background:#2a2a4a;color:#7a7a9a;}
+    .login-tab.active-tab{background:#3b82f6;color:#fff;}
     .h-full{height:100%}.w-full{width:100%}.overflow-auto{overflow:auto}.fixed{position:fixed}.relative{position:relative}.absolute{position:absolute}
     .inset-0{inset:0}.left-3{left:.75rem}.right-4{right:1rem}.top-2\.5{top:.625rem}.top-4{top:1rem}.z-40{z-index:40}.z-50{z-index:50}
     .flex{display:flex}.grid{display:grid}.hidden{display:none}.items-center{align-items:center}.items-start{align-items:flex-start}.justify-between{justify-content:space-between}.justify-center{justify-content:center}.flex-wrap{flex-wrap:wrap}
@@ -41,10 +43,10 @@
     // 1. Create a free project at https://supabase.com
     // 2. Go to Project Settings > API and copy your Project URL and anon public key
     // 3. Paste them below, replacing the placeholder strings
-    const SUPABASE_URL = 'gnchnpbcephaggilwqsc';       // e.g. 'https://abcdefgh.supabase.co'
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImduY2hucGJjZXBoYWdnaWx3cXNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyNjk5NDcsImV4cCI6MjEwMzg0NTk0N30.Pdj-Vtb7-f4AtmKo3cIlSF9kp2DsqjrXqukXBL0RrFc';     // the long "anon public" key
+    const SUPABASE_URL = 'YOUR_SUPABASE_PROJECT_URL';       // e.g. 'https://abcdefgh.supabase.co'
+    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';     // the long "anon public" key
     window.supabaseClient = (SUPABASE_URL.indexOf('https://') === 0 && SUPABASE_ANON_KEY && SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY' && window.supabase)
-      ? window.supabase.createClient(gnchnpbcephaggilwqsc, eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImduY2hucGJjZXBoYWdnaWx3cXNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyNjk5NDcsImV4cCI6MjEwMzg0NTk0N30.Pdj-Vtb7-f4AtmKo3cIlSF9kp2DsqjrXqukXBL0RrFc)
+      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
       : null;
     if (!window.supabaseClient) {
       console.warn('Supabase not configured yet — falling back to local-only storage. See SUPABASE_URL/SUPABASE_ANON_KEY in index.html.');
@@ -162,9 +164,16 @@
       <p id="login-subtitle" style="color: #7a7a9a; font-size: 14px;">Your personal digital collection</p>
      </div>
      <div class="bg-gradient-to-b from-blue-900 to-blue-800 rounded-xl p-6 mb-6" style="background: linear-gradient(180deg, #1e3a8a 0%, #1e40af 100%); border: 2px solid #3b82f6;">
-      <p style="color: #93c5fd; text-align: center; font-size: 13px; font-weight: 500; margin-bottom: 2px;">LRN Login Required</p>
-      <p style="color: #60a5fa; text-align: center; font-size: 11px;">Learning Record Number verification</p>
+      <p id="login-mode-title" style="color: #93c5fd; text-align: center; font-size: 13px; font-weight: 500; margin-bottom: 2px;">LRN Login Required</p>
+      <p id="login-mode-subtitle" style="color: #60a5fa; text-align: center; font-size: 11px;">Learning Record Number verification</p>
      </div>
+
+     <div style="display:flex;gap:6px;margin-bottom:16px;">
+      <button id="tab-student" onclick="switchLoginMode('student')" type="button" class="login-tab active-tab" style="flex:1;padding:8px;border-radius:8px;font-size:12px;font-weight:600;border:none;cursor:pointer;">Student</button>
+      <button id="tab-teacher" onclick="switchLoginMode('teacher')" type="button" class="login-tab" style="flex:1;padding:8px;border-radius:8px;font-size:12px;font-weight:600;border:none;cursor:pointer;">Teacher</button>
+      <button id="tab-librarian" onclick="switchLoginMode('librarian')" type="button" class="login-tab" style="flex:1;padding:8px;border-radius:8px;font-size:12px;font-weight:600;border:none;cursor:pointer;">Librarian</button>
+     </div>
+
      <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
       <div><label for="lrn-input" class="text-xs font-medium" style="color: #9a9aba; display: block; margin-bottom: 8px;">Learning Record Number (LRN)</label> <input id="lrn-input" type="text" placeholder="e.g., 123456789012" required class="w-full px-4 py-3 rounded-lg text-sm transition" style="background: #2a2a4a; color: #eee; border: 2px solid #3a3a5a;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#3a3a5a'">
        <p style="color: #7a7a9a; font-size: 11px; margin-top: 6px;">Your LRN is a unique 12-digit identifier issued by your educational institution.</p>
@@ -172,19 +181,24 @@
      </form>
      <p id="login-error" class="hidden text-center text-xs mt-4 px-4 py-2 rounded-lg" style="background: #fee2e2; color: #dc2626;">Invalid LRN format. Please enter a valid number.</p>
 
-     <button id="show-librarian-login" onclick="toggleLibrarianLogin(true)" type="button" style="display:block;width:100%;text-align:center;background:none;border:none;color:#9a9aba;font-size:12px;margin-top:16px;cursor:pointer;text-decoration:underline;">Librarian login</button>
+     <form id="teacher-login-form" onsubmit="handleTeacherLogin(event)" class="space-y-4 hidden">
+      <div><label for="employee-id-input" class="text-xs font-medium" style="color:#9a9aba;display:block;margin-bottom:8px;">Employee ID</label>
+       <input id="employee-id-input" type="text" placeholder="e.g., EMP-0001" required class="w-full px-4 py-3 rounded-lg text-sm transition" style="background:#2a2a4a;color:#eee;border:2px solid #3a3a5a;">
+       <p style="color:#7a7a9a;font-size:11px;margin-top:6px;">Your Employee ID must be registered by the library office before you can sign in.</p></div>
+      <button id="teacher-login-btn" type="submit" class="w-full py-3 rounded-lg font-medium transition" style="background:linear-gradient(135deg,#397d6e,#2a5c50);color:#fff;border:none;cursor:pointer;"><span id="teacher-login-btn-text">Enter Library</span></button>
+     </form>
+     <p id="teacher-login-error" class="hidden text-center text-xs mt-4 px-4 py-2 rounded-lg" style="background:#fee2e2;color:#dc2626;">Employee ID not recognized. Please check with the library office.</p>
 
-     <form id="librarian-login-form" onsubmit="handleLibrarianLogin(event)" class="space-y-4 hidden" style="margin-top:14px;">
-      <div><label for="lib-email-input" class="text-xs font-medium" style="color:#9a9aba;display:block;margin-bottom:8px;">Librarian email</label>
-       <input id="lib-email-input" type="email" placeholder="librarian@sammi.edu.ph" required class="w-full px-4 py-3 rounded-lg text-sm transition" style="background:#2a2a4a;color:#eee;border:2px solid #3a3a5a;"></div>
+     <form id="librarian-login-form" onsubmit="handleLibrarianLogin(event)" class="space-y-4 hidden">
+      <div><label for="lib-email-input" class="text-xs font-medium" style="color:#9a9aba;display:block;margin-bottom:8px;">Username</label>
+       <input id="lib-email-input" type="text" placeholder="e.g. pjmlm" required class="w-full px-4 py-3 rounded-lg text-sm transition" style="background:#2a2a4a;color:#eee;border:2px solid #3a3a5a;"></div>
       <div><label for="lib-password-input" class="text-xs font-medium" style="color:#9a9aba;display:block;margin-bottom:8px;">Password</label>
        <input id="lib-password-input" type="password" placeholder="••••••••" required class="w-full px-4 py-3 rounded-lg text-sm transition" style="background:#2a2a4a;color:#eee;border:2px solid #3a3a5a;"></div>
       <button id="librarian-login-btn" type="submit" class="w-full py-3 rounded-lg font-medium transition" style="background:linear-gradient(135deg,#e8ac1f,#b9820f);color:#3a2600;border:none;cursor:pointer;"><span id="librarian-login-btn-text">Sign in as Librarian</span></button>
-      <button onclick="toggleLibrarianLogin(false)" type="button" style="display:block;width:100%;text-align:center;background:none;border:none;color:#9a9aba;font-size:12px;cursor:pointer;text-decoration:underline;">Back to student login</button>
      </form>
-     <p id="librarian-login-error" class="hidden text-center text-xs mt-4 px-4 py-2 rounded-lg" style="background:#fee2e2;color:#dc2626;">Incorrect email or password.</p>
+     <p id="librarian-login-error" class="hidden text-center text-xs mt-4 px-4 py-2 rounded-lg" style="background:#fee2e2;color:#dc2626;">Incorrect username or password.</p>
      <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid #3a3a5a;">
-      <p style="color: #7a7a9a; text-align: center; font-size: 12px;"></p>
+      <p style="color: #7a7a9a; text-align: center; font-size: 12px;">Demo: Enter any 12-digit number to access</p>
      </div>
     </div>
    </div><!-- Toast -->
@@ -198,6 +212,7 @@
        <p id="lib-subtitle" style="color: #7a7a9a; font-size: 14px; display:none;"></p>
       </div>
       <span id="librarian-badge" style="display:none;background:#e8ac1f;color:#3a2600;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;letter-spacing:.03em;">📚 Librarian Mode</span>
+      <span id="teacher-badge" style="display:none;background:#397d6e;color:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;letter-spacing:.03em;">🍎 Teacher Account</span>
       <button id="librarian-logout-btn" onclick="librarianLogout()" class="hidden" style="background:none;border:1px solid #3a3a5a;color:#9a9aba;font-size:11px;padding:4px 10px;border-radius:999px;cursor:pointer;">Log out</button>
      </div><button id="add-btn" onclick="openModal()" class="hidden items-center gap-2 px-4 py-2 rounded-lg font-medium transition" style="background: #e8d5b7; color: #1a1a2e;"> <i data-lucide="plus" style="width:18px;height:18px;"></i> Add Book </button>
     </div>
@@ -217,7 +232,7 @@
    <div class="max-w-6xl mx-auto px-6 py-4 flex flex-wrap items-center justify-between gap-3">
     <div class="flex gap-4 text-sm" style="color: #7a7a9a;"><span id="stat-total">0 books</span> <span id="stat-reading">0 reading</span> <span id="stat-completed">0 completed</span>
     </div>
-    <div class="flex gap-2"><select id="filter-cat" onchange="renderBooks()" class="px-3 py-1.5 rounded-lg text-sm" style="background: #2a2a4a; color: #ccc; border: 1px solid #3a3a5a;"> <option value="all">All Categories</option> <option value="Fiction">Fiction</option> <option value="Non-Fiction">Non-Fiction</option> <option value="Science">Science</option> <option value="History">History</option> <option value="Technology">Technology</option> <option value="Philosophy">Philosophy</option> <option value="Other">Other</option> </select> <select id="filter-status" onchange="renderBooks()" class="px-3 py-1.5 rounded-lg text-sm" style="background: #2a2a4a; color: #ccc; border: 1px solid #3a3a5a;"> <option value="all">All Availability</option> <option value="available">Available Now</option> <option value="out">Fully Checked Out</option> </select> <button id="login-log-btn" onclick="openLoginLog()" class="hidden items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition" style="background: #2a2a4a; color: #9a9aba; border: 1px solid #3a3a5a;"> <i data-lucide="log-in" style="width:16px;height:16px;"></i> Login Log </button> <button id="reports-btn" onclick="openReports()" class="hidden items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition" style="background: #2a2a4a; color: #9a9aba; border: 1px solid #3a3a5a;"> <i data-lucide="bar-chart-2" style="width:16px;height:16px;"></i> Reports </button> <button id="download-btn" onclick="downloadCode()" class="hidden items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition" style="background: #2a2a4a; color: #9a9aba; border: 1px solid #3a3a5a;"> <i data-lucide="download" style="width:16px;height:16px;"></i> Download </button>
+    <div class="flex gap-2"><select id="filter-cat" onchange="renderBooks()" class="px-3 py-1.5 rounded-lg text-sm" style="background: #2a2a4a; color: #ccc; border: 1px solid #3a3a5a;"> <option value="all">All Categories</option> <option value="Fiction">Fiction</option> <option value="Non-Fiction">Non-Fiction</option> <option value="Science">Science</option> <option value="History">History</option> <option value="Technology">Technology</option> <option value="Philosophy">Philosophy</option> <option value="Other">Other</option> </select> <select id="filter-status" onchange="renderBooks()" class="px-3 py-1.5 rounded-lg text-sm" style="background: #2a2a4a; color: #ccc; border: 1px solid #3a3a5a;"> <option value="all">All Availability</option> <option value="available">Available Now</option> <option value="out">Fully Checked Out</option> </select> <button id="login-log-btn" onclick="openLoginLog()" class="hidden items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition" style="background: #2a2a4a; color: #9a9aba; border: 1px solid #3a3a5a;"> <i data-lucide="log-in" style="width:16px;height:16px;"></i> Login Log </button> <button id="reports-btn" onclick="openReports()" class="hidden items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition" style="background: #2a2a4a; color: #9a9aba; border: 1px solid #3a3a5a;"> <i data-lucide="bar-chart-2" style="width:16px;height:16px;"></i> Reports </button> <button id="manage-teachers-btn" onclick="openManageTeachers()" class="hidden items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition" style="background: #2a2a4a; color: #9a9aba; border: 1px solid #3a3a5a;"> <i data-lucide="users" style="width:16px;height:16px;"></i> Manage Teachers </button> <button id="download-btn" onclick="downloadCode()" class="hidden items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition" style="background: #2a2a4a; color: #9a9aba; border: 1px solid #3a3a5a;"> <i data-lucide="download" style="width:16px;height:16px;"></i> Download </button>
     </div>
    </div><!-- Open Access Shelf -->
    <section class="max-w-6xl mx-auto px-6 pb-6" id="nav-open-shelf" aria-labelledby="open-shelf-title">
@@ -469,6 +484,20 @@
     </div>
     <div id="reports-content" class="space-y-4"></div>
    </div>
+  </div><!-- Manage Teachers Modal -->
+  <div id="manage-teachers-modal" class="fixed inset-0 z-40 hidden items-center justify-center" style="background: rgba(0,0,0,0.7);overflow-y:auto;padding:24px 0;">
+   <div class="fade-in rounded-xl p-6 w-full max-w-lg mx-4" style="background: #22223a; border: 1px solid #3a3a5a; max-height: 80vh; overflow-y: auto;">
+    <div class="flex justify-between items-center mb-4">
+     <h2 style="font-family:'Crimson Pro',serif;color:#e8d5b7;font-size:22px;font-weight:600;">Manage Teachers</h2><button onclick="closeManageTeachers()" style="color:#7a7a9a;"><i data-lucide="x" style="width:20px;height:20px;"></i></button>
+    </div>
+    <form id="add-teacher-form" onsubmit="handleAddTeacher(event)" style="display:flex;gap:8px;margin-bottom:16px;">
+     <input id="new-teacher-id" placeholder="Employee ID (e.g. EMP-0001)" required class="px-3 py-2 rounded-lg text-sm" style="flex:1;background:#2a2a4a;color:#eee;border:1px solid #3a3a5a;">
+     <input id="new-teacher-name" placeholder="Full name" required class="px-3 py-2 rounded-lg text-sm" style="flex:1;background:#2a2a4a;color:#eee;border:1px solid #3a3a5a;">
+     <button id="add-teacher-btn" type="submit" class="px-4 py-2 rounded-lg text-sm font-medium" style="background:#397d6e;color:#fff;border:none;cursor:pointer;white-space:nowrap;">Add</button>
+    </form>
+    <p id="manage-teachers-error" class="hidden text-xs mt-1 mb-3 px-3 py-2 rounded-lg" style="background:#fee2e2;color:#dc2626;"></p>
+    <div id="teachers-list" class="space-y-2"></div>
+   </div>
   </div><!-- Login Log Modal -->
   <div id="login-log-modal" class="fixed inset-0 z-40 hidden items-center justify-center" style="background: rgba(0,0,0,0.7);">
    <div class="fade-in rounded-xl p-6 w-full max-w-2xl mx-4" style="background: #22223a; border: 1px solid #3a3a5a; max-height: 80vh; overflow-y: auto;">
@@ -507,8 +536,9 @@
     const loginLogBtn = document.getElementById('login-log-btn');
     const downloadBtn = document.getElementById('download-btn');
     const reportsBtn = document.getElementById('reports-btn');
+    const manageTeachersBtn = document.getElementById('manage-teachers-btn');
     const librarianBadge = document.getElementById('librarian-badge');
-    [addBtn, loginLogBtn, downloadBtn, reportsBtn].forEach(btn => {
+    [addBtn, loginLogBtn, downloadBtn, reportsBtn, manageTeachersBtn].forEach(btn => {
       if (!btn) return;
       if (isLibrarian) {
         btn.classList.remove('hidden');
@@ -521,15 +551,33 @@
     if (librarianBadge) librarianBadge.style.display = isLibrarian ? 'inline-block' : 'none';
     const librarianLogoutBtn = document.getElementById('librarian-logout-btn');
     if (librarianLogoutBtn) librarianLogoutBtn.classList.toggle('hidden', !isLibrarian);
+    const teacherBadge = document.getElementById('teacher-badge');
+    const isTeacher = !isLibrarian && !!sessionStorage.getItem('sammiteacher') && currentUser === sessionStorage.getItem('sammiteacher');
+    if (teacherBadge) teacherBadge.style.display = isTeacher ? 'inline-block' : 'none';
     renderBooks();
   }
 
-  function toggleLibrarianLogin(show) {
-    document.getElementById('login-form').classList.toggle('hidden', show);
-    document.getElementById('show-librarian-login').classList.toggle('hidden', show);
-    document.getElementById('librarian-login-form').classList.toggle('hidden', !show);
-    document.getElementById('librarian-login-error').classList.add('hidden');
+  function switchLoginMode(mode) {
+    const forms = { student: 'login-form', teacher: 'teacher-login-form', librarian: 'librarian-login-form' };
+    const errors = { student: 'login-error', teacher: 'teacher-login-error', librarian: 'librarian-login-error' };
+    Object.entries(forms).forEach(([key, id]) => {
+      document.getElementById(id).classList.toggle('hidden', key !== mode);
+      document.getElementById('tab-' + key).classList.toggle('active-tab', key === mode);
+      document.getElementById(errors[key]).classList.add('hidden');
+    });
+    const titles = {
+      student: ['LRN Login Required', 'Learning Record Number verification'],
+      teacher: ['Employee ID Login', 'For teachers and school staff'],
+      librarian: ['Librarian Login', 'Real, password-protected staff access']
+    };
+    document.getElementById('login-mode-title').textContent = titles[mode][0];
+    document.getElementById('login-mode-subtitle').textContent = titles[mode][1];
   }
+
+  // Supabase Auth requires a real email under the hood, but librarians sign in
+  // with a plain username here. This suffix converts one to the other — it's
+  // never shown to the user, just used internally when talking to Supabase.
+  const LIBRARIAN_EMAIL_DOMAIN = 'sammi.local';
 
   async function handleLibrarianLogin(e) {
     e.preventDefault();
@@ -544,7 +592,8 @@
       return;
     }
 
-    const email = document.getElementById('lib-email-input').value.trim();
+    const username = document.getElementById('lib-email-input').value.trim().toLowerCase();
+    const email = username.includes('@') ? username : `${username}@${LIBRARIAN_EMAIL_DOMAIN}`;
     const password = document.getElementById('lib-password-input').value;
     btn.disabled = true;
     btnText.textContent = 'Signing in...';
@@ -555,7 +604,7 @@
     btnText.textContent = 'Sign in as Librarian';
 
     if (error || !data.session) {
-      errorEl.textContent = 'Incorrect email or password.';
+      errorEl.textContent = 'Incorrect username or password.';
       errorEl.classList.remove('hidden');
       return;
     }
@@ -570,11 +619,12 @@
     librarianSession = null;
     currentUser = null;
     sessionStorage.removeItem('sammilrn');
+    sessionStorage.removeItem('sammiteacher');
     applyRolePermissions();
     location.reload();
   }
 
-  // LRN Login Handler (students — unchanged, format-check only)
+  // LRN Login Handler (students — format-check only, unchanged)
   function handleLogin(e) {
     e.preventDefault();
     const lrnInput = document.getElementById('lrn-input').value.trim();
@@ -596,7 +646,7 @@
     setTimeout(() => {
       currentUser = lrnInput;
       sessionStorage.setItem('sammilrn', lrnInput);
-      recordLogin(lrnInput);
+      recordLogin(lrnInput, 'student');
       applyRolePermissions();
       document.getElementById('login-screen').style.display = 'none';
       btn.disabled = false;
@@ -604,7 +654,45 @@
     }, 600);
   }
 
-  // Check if already logged in (student LRN session, or a real librarian session)
+  // Employee ID Login Handler (teachers — checked against a real
+  // allowlist on the server via the is_valid_teacher() function, so
+  // this can't be bypassed by editing the page's JavaScript).
+  async function handleTeacherLogin(e) {
+    e.preventDefault();
+    const employeeId = document.getElementById('employee-id-input').value.trim();
+    const errorEl = document.getElementById('teacher-login-error');
+    const btn = document.getElementById('teacher-login-btn');
+    const btnText = document.getElementById('teacher-login-btn-text');
+    errorEl.classList.add('hidden');
+
+    if (!window.supabaseClient) {
+      errorEl.textContent = 'Server not configured yet — add your Supabase URL and key in this file first.';
+      errorEl.classList.remove('hidden');
+      return;
+    }
+
+    btn.disabled = true;
+    btnText.textContent = 'Verifying...';
+
+    const { data: isValid, error } = await window.supabaseClient.rpc('is_valid_teacher', { emp_id: employeeId });
+
+    btn.disabled = false;
+    btnText.textContent = 'Enter Library';
+
+    if (error || !isValid) {
+      errorEl.textContent = 'Employee ID not recognized. Please check with the library office.';
+      errorEl.classList.remove('hidden');
+      return;
+    }
+
+    currentUser = employeeId;
+    sessionStorage.setItem('sammiteacher', employeeId);
+    recordLogin(employeeId, 'teacher');
+    applyRolePermissions();
+    document.getElementById('login-screen').style.display = 'none';
+  }
+
+  // Check if already logged in (student LRN session, teacher session, or a real librarian session)
   window.addEventListener('load', async () => {
     safeCreateIcons();
 
@@ -623,13 +711,22 @@
       currentUser = storedLRN;
       applyRolePermissions();
       document.getElementById('login-screen').style.display = 'none';
+      return;
+    }
+
+    const storedTeacher = sessionStorage.getItem('sammiteacher');
+    if (storedTeacher) {
+      currentUser = storedTeacher;
+      applyRolePermissions();
+      document.getElementById('login-screen').style.display = 'none';
     }
   });
 
-  async function recordLogin(lrn) {
+  async function recordLogin(id, role) {
     const now = new Date();
     const logEntry = {
-      lrn: lrn,
+      lrn: id,
+      role: role || 'student',
       login_timestamp: now.toISOString(),
       login_date: now.toLocaleDateString(),
       login_time: now.toLocaleTimeString()
@@ -672,17 +769,24 @@
       return;
     }
 
-    content.innerHTML = logs.slice().sort((a, b) => new Date(b.login_timestamp) - new Date(a.login_timestamp)).map(log => `
+    content.innerHTML = logs.slice().sort((a, b) => new Date(b.login_timestamp) - new Date(a.login_timestamp)).map(log => {
+      const role = log.role || 'student';
+      const roleColor = role === 'teacher' ? '#397d6e' : '#3b82f6';
+      const roleLabel = role === 'teacher' ? 'Teacher' : 'Student';
+      const idLabel = role === 'teacher' ? 'Employee ID' : 'LRN';
+      return `
       <div class="p-3 rounded-lg" style="background:#2a2a4a;border-left:3px solid #e8d5b7;">
         <div class="flex justify-between items-start">
           <div>
-            <p style="color:#e8d5b7;font-weight:600;font-size:14px;">LRN: ${escHtml(log.lrn)}</p>
+            <span style="background:${roleColor};color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;">${roleLabel}</span>
+            <p style="color:#e8d5b7;font-weight:600;font-size:14px;margin-top:6px;">${idLabel}: ${escHtml(log.lrn)}</p>
             <p style="color:#9a9aba;font-size:12px;margin-top:4px;"><i data-lucide="calendar" style="width:12px;height:12px;display:inline;margin-right:4px;"></i> ${log.login_date}</p>
             <p style="color:#9a9aba;font-size:12px;margin-top:2px;"><i data-lucide="clock" style="width:12px;height:12px;display:inline;margin-right:4px;"></i> ${log.login_time}</p>
           </div>
         </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
     safeCreateIcons();
   }
 
@@ -1120,6 +1224,89 @@
   function closeReports() {
     document.getElementById('reports-modal').classList.add('hidden');
     document.getElementById('reports-modal').classList.remove('flex');
+  }
+
+  // ====== MANAGE TEACHERS (librarian-only, real server-enforced) ======
+  let teachersCache = [];
+
+  async function openManageTeachers() {
+    if (!isLibrarian || !window.supabaseClient) return;
+    document.getElementById('manage-teachers-modal').classList.remove('hidden');
+    document.getElementById('manage-teachers-modal').classList.add('flex');
+    document.getElementById('manage-teachers-error').classList.add('hidden');
+    document.getElementById('add-teacher-form').reset();
+    await loadTeachers();
+  }
+
+  function closeManageTeachers() {
+    document.getElementById('manage-teachers-modal').classList.add('hidden');
+    document.getElementById('manage-teachers-modal').classList.remove('flex');
+  }
+
+  async function loadTeachers() {
+    const list = document.getElementById('teachers-list');
+    list.innerHTML = '<p style="color:#7a7a9a;text-align:center;padding:16px;">Loading…</p>';
+    const { data, error } = await window.supabaseClient.from('teachers').select('*').order('added_at', { ascending: false });
+    if (error) {
+      list.innerHTML = '<p style="color:#dc2626;text-align:center;padding:16px;">Could not load teachers (access denied or offline).</p>';
+      return;
+    }
+    teachersCache = data || [];
+    renderTeachersList();
+  }
+
+  function renderTeachersList() {
+    const list = document.getElementById('teachers-list');
+    if (teachersCache.length === 0) {
+      list.innerHTML = '<p style="color:#7a7a9a;text-align:center;padding:16px;">No teachers added yet.</p>';
+      return;
+    }
+    list.innerHTML = teachersCache.map(t => `
+      <div class="flex justify-between items-center p-3 rounded-lg" style="background:#2a2a4a;border:1px solid #3a3a5a;">
+        <div>
+          <p style="color:#eee;font-weight:600;font-size:13.5px;">${escHtml(t.name || '(no name)')}</p>
+          <p style="color:#9a9aba;font-size:12px;margin-top:2px;">Employee ID: ${escHtml(t.employee_id)}</p>
+        </div>
+        <button onclick="removeTeacher('${t.employee_id.replace(/'/g, "\\'")}')" class="p-1.5 rounded" style="color:#ef4444;background:none;border:none;cursor:pointer;" title="Remove"><i data-lucide="trash-2" style="width:16px;height:16px;"></i></button>
+      </div>
+    `).join('');
+    safeCreateIcons();
+  }
+
+  async function handleAddTeacher(e) {
+    e.preventDefault();
+    if (!isLibrarian) return;
+    const errorEl = document.getElementById('manage-teachers-error');
+    errorEl.classList.add('hidden');
+    const btn = document.getElementById('add-teacher-btn');
+    const employeeId = document.getElementById('new-teacher-id').value.trim();
+    const name = document.getElementById('new-teacher-name').value.trim();
+
+    btn.disabled = true; btn.textContent = 'Adding...';
+    const { error } = await window.supabaseClient.from('teachers').insert({ employee_id: employeeId, name: name });
+    btn.disabled = false; btn.textContent = 'Add';
+
+    if (error) {
+      errorEl.textContent = error.code === '23505'
+        ? 'That Employee ID is already registered.'
+        : 'Could not add teacher — access denied or offline.';
+      errorEl.classList.remove('hidden');
+      return;
+    }
+    document.getElementById('add-teacher-form').reset();
+    showToast(`${name} added as a teacher`);
+    await loadTeachers();
+  }
+
+  async function removeTeacher(employeeId) {
+    if (!isLibrarian) return;
+    const { error } = await window.supabaseClient.from('teachers').delete().eq('employee_id', employeeId);
+    if (error) {
+      showToast('Could not remove teacher — access denied or offline', true);
+      return;
+    }
+    showToast('Teacher removed');
+    await loadTeachers();
   }
 
   function editBook(id) {
