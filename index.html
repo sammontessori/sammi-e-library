@@ -44,7 +44,7 @@
     const SUPABASE_URL = 'gnchnpbcephaggilwqsc';       // e.g. 'https://abcdefgh.supabase.co'
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImduY2hucGJjZXBoYWdnaWx3cXNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyNjk5NDcsImV4cCI6MjEwMzg0NTk0N30.Pdj-Vtb7-f4AtmKo3cIlSF9kp2DsqjrXqukXBL0RrFc';     // the long "anon public" key
     window.supabaseClient = (SUPABASE_URL.indexOf('https://') === 0 && SUPABASE_ANON_KEY && SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY' && window.supabase)
-      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+      ? window.supabase.createClient(gnchnpbcephaggilwqsc, eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImduY2hucGJjZXBoYWdnaWx3cXNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyNjk5NDcsImV4cCI6MjEwMzg0NTk0N30.Pdj-Vtb7-f4AtmKo3cIlSF9kp2DsqjrXqukXBL0RrFc)
       : null;
     if (!window.supabaseClient) {
       console.warn('Supabase not configured yet — falling back to local-only storage. See SUPABASE_URL/SUPABASE_ANON_KEY in index.html.');
@@ -184,7 +184,7 @@
      </form>
      <p id="librarian-login-error" class="hidden text-center text-xs mt-4 px-4 py-2 rounded-lg" style="background:#fee2e2;color:#dc2626;">Incorrect email or password.</p>
      <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid #3a3a5a;">
-      <p style="color: #7a7a9a; text-align: center; font-size: 12px;">Demo: Enter any 12-digit number to access</p>
+      <p style="color: #7a7a9a; text-align: center; font-size: 12px;"></p>
      </div>
     </div>
    </div><!-- Toast -->
