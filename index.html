@@ -43,8 +43,8 @@
     // 1. Create a free project at https://supabase.com
     // 2. Go to Project Settings > API and copy your Project URL and anon public key
     // 3. Paste them below, replacing the placeholder strings
-    const SUPABASE_URL = 'YOUR_SUPABASE_PROJECT_URL';       // e.g. 'https://abcdefgh.supabase.co'
-    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';     // the long "anon public" key
+    const SUPABASE_URL = 'gnchnpbcephaggilwqsc';       // e.g. 'https://abcdefgh.supabase.co'
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImduY2hucGJjZXBoYWdnaWx3cXNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyNjk5NDcsImV4cCI6MjEwMzg0NTk0N30.Pdj-Vtb7-f4AtmKo3cIlSF9kp2DsqjrXqukXBL0RrFc';     // the long "anon public" key
     window.supabaseClient = (SUPABASE_URL.indexOf('https://') === 0 && SUPABASE_ANON_KEY && SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY' && window.supabase)
       ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
       : null;
