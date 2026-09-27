@@ -652,7 +652,11 @@
     const btn = document.getElementById('login-btn');
     const btnText = document.getElementById('login-btn-text');
 
-    // Validate LRN format (12 digits) before even touching the server
+    // Validate LRN format (12 digits).
+    // NOTE: roster verification against the students table is temporarily
+    // disabled — this only checks the format, like the original version.
+    // To re-enable real enrollment checking, restore the is_valid_student()
+    // RPC call that used to be here once the students table is populated.
     if (!/^\d{12}$/.test(lrnInput)) {
       errorEl.textContent = 'Invalid LRN format. Please enter a valid 12-digit number.';
       errorEl.classList.remove('hidden');
@@ -663,40 +667,19 @@
     btn.disabled = true;
     btnText.textContent = 'Verifying...';
 
-    if (!window.supabaseClient) {
-      errorEl.textContent = 'Server not configured yet — add your Supabase URL and key in this file first.';
-      errorEl.classList.remove('hidden');
+    setTimeout(() => {
+      currentUser = lrnInput;
+      sessionStorage.setItem('sammilrn', lrnInput);
+      recordLogin(lrnInput, 'student', 'success');
+      applyRolePermissions();
+      document.getElementById('login-screen').style.display = 'none';
       btn.disabled = false;
       btnText.textContent = 'Enter Library';
-      return;
-    }
-
-    // Real check against the enrolled-students roster (class adviser lists),
-    // not just a format check. This is what makes unenrolled LRNs traceable
-    // and blockable rather than silently let in.
-    const { data: isEnrolled, error } = await window.supabaseClient.rpc('is_valid_student', { check_lrn: lrnInput });
-
-    if (error || !isEnrolled) {
-      recordLogin(lrnInput, 'student', 'denied');
-      errorEl.textContent = 'LRN not recognized as an enrolled student. Please check with your class adviser or the library office.';
-      errorEl.classList.remove('hidden');
-      btn.disabled = false;
-      btnText.textContent = 'Enter Library';
-      return;
-    }
-
-    currentUser = lrnInput;
-    sessionStorage.setItem('sammilrn', lrnInput);
-    recordLogin(lrnInput, 'student', 'success');
-    applyRolePermissions();
-    document.getElementById('login-screen').style.display = 'none';
-    btn.disabled = false;
-    btnText.textContent = 'Enter Library';
+    }, 400);
   }
 
-  // Employee ID Login Handler (teachers — checked against a real
-  // allowlist on the server via the is_valid_teacher() function, so
-  // this can't be bypassed by editing the page's JavaScript).
+  // Employee ID Login Handler (teachers — format check only for now;
+  // see note in handleLogin above about re-enabling real roster checks)
   async function handleTeacherLogin(e) {
     e.preventDefault();
     const employeeId = document.getElementById('employee-id-input').value.trim();
@@ -711,32 +694,21 @@
       return;
     }
 
-    if (!window.supabaseClient) {
-      errorEl.textContent = 'Server not configured yet — add your Supabase URL and key in this file first.';
-      errorEl.classList.remove('hidden');
-      return;
-    }
-
     btn.disabled = true;
     btnText.textContent = 'Verifying...';
 
-    const { data: isValid, error } = await window.supabaseClient.rpc('is_valid_teacher', { emp_id: employeeId });
-
-    btn.disabled = false;
-    btnText.textContent = 'Enter Library';
-
-    if (error || !isValid) {
-      recordLogin(employeeId, 'teacher', 'denied');
-      errorEl.textContent = 'Employee ID not recognized. Please check with the library office.';
-      errorEl.classList.remove('hidden');
-      return;
-    }
-
-    currentUser = employeeId;
-    sessionStorage.setItem('sammiteacher', employeeId);
-    recordLogin(employeeId, 'teacher', 'success');
-    applyRolePermissions();
-    document.getElementById('login-screen').style.display = 'none';
+    // NOTE: roster verification against the teachers table is temporarily
+    // disabled — this only checks the format. To re-enable, restore the
+    // is_valid_teacher() RPC call once the teachers table is populated.
+    setTimeout(() => {
+      currentUser = employeeId;
+      sessionStorage.setItem('sammiteacher', employeeId);
+      recordLogin(employeeId, 'teacher', 'success');
+      applyRolePermissions();
+      document.getElementById('login-screen').style.display = 'none';
+      btn.disabled = false;
+      btnText.textContent = 'Enter Library';
+    }, 400);
   }
 
   // Check if already logged in (student LRN session, teacher session, or a real librarian session)
